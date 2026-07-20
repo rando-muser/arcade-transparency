@@ -151,10 +151,23 @@ namespace transparency {
             if (sprite.data[OPACITY_KEY]) {
                 make(sprite, sprite.data[OPACITY_KEY]);
             }
-            make(sprite, 50);
+            else {
+                make(sprite, 50);
+            }
         }
         else {
             remove(sprite);
+        }
+    }
+
+    //% block="Is $sprite transparent"
+    export function isTransparent(sprite: Sprite) {
+        let index = transparentSprites.indexOf(sprite);
+        if (index == -1) {
+            return(false);
+        }
+        else {
+            return(true);
         }
     }
 
