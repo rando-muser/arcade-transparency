@@ -1,13 +1,25 @@
 //% color=#1B9AAA weight=1 icon="\uf2a8"  block="Transparency"
 namespace transparency {
+    //% whenUsed
     const transparencyPlaceholder = image.create(1, 1);
+    //% whenUsed
     let transparentSprites = [sprites.create(transparencyPlaceholder)];
+    //% whenUsed
     let transparentImages = [transparencyPlaceholder];
+    //% whenUsed
     const hexNums = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"];
+    //% whenUsed
+    let colorCache = control.createBuffer(256);
+    //% whenUsed
+    let colorCacheList = [colorCache];
+    //% whenUsed
+    let colorCacheOpacities = [50];
+
     sprites.destroy(transparentSprites[0]);
     transparentSprites.pop();
     transparentImages.pop();
 
+    //% whenUsed
     let pal = palleteToRGB(color.currentPalette());
 
     function decToHex(dec: number) {
@@ -66,6 +78,45 @@ namespace transparency {
         return (15);
     }
 
+    //takes indeces as 16-pallete, outputs in 16-pallete
+    function lookupColor(spriteColorIndex: number, backgroundColorIndex: number, opacityIndex: number) {
+        let pos = colorCacheOpacities.indexOf(opacityIndex);
+        let currentCache = colorCacheList[pos];
+        const cacheIndex = (spriteColorIndex * 16) + backgroundColorIndex;
+
+        if (currentCache[cacheIndex] === 0) {
+            currentCache[cacheIndex] = calculateLowestDistanceColor(spriteColorIndex, backgroundColorIndex, opacityIndex)
+        }
+
+        return currentCache[cacheIndex]
+    }
+
+    //takes inputs as 16-pallete, outputs in 16-pallete
+    function calculateLowestDistanceColor(colorNum: number, toNum: number, opacity: number) {
+        let color = pal[colorNum - 1];
+        let to = pal[toNum - 1];
+        let co = 2 * opacity / 100
+
+        let mix = [(co * color[0] + (2 - co) * to[0]) / 2, (co * color[1] + (2 - co) * to[1]) / 2, (co * color[2] + (2 - co) * to[2]) / 2];
+        let distance = 1023;
+        let index = 0;
+        let tempNum = 0;
+
+        //now find the color matching that rbg closest 
+        for (let j = 0; j < 15; j++) {
+            tempNum = Math.sqrt(Math.pow(mix[0] - pal[j][0], 2) + Math.pow(mix[1] - pal[j][1], 2) + Math.pow(mix[2] - pal[j][2], 2));
+            if (tempNum < distance) {
+                distance = tempNum;
+                index = j;
+                if (distance == 0) {
+                    break;
+                }
+            }
+        }
+
+        return (index + 1);
+    }
+
     function updateTransparency() {
         for (let i = 0; i < transparentSprites.length; i++) {
             if (transparentSprites[i]) {
@@ -76,8 +127,10 @@ namespace transparency {
                 for (let y = 0; y < s.image.height; y++) {
                     for (let x = 0; x < s.image.width; x++) {
                         if (transparentImages[i].getPixel(x, y) != 0) {
-
-                            let color = pal[transparentImages[i].getPixel(x, y) - 1];
+                            let tempNum2 = getColor(Math.round(s.x) + x - (Math.ceil(s.image.width / 2)), Math.round(s.y) + y - Math.ceil(s.image.height / 2));
+                            let index = calculateLowestDistanceColor(transparentImages[i].getPixel(x, y), tempNum2, s.data[OPACITY_KEY])
+                            
+                            /*let color = pal[transparentImages[i].getPixel(x, y) - 1];
                             let tempNum2 = getColor(Math.round(s.x) + x - (Math.ceil(s.image.width / 2)), Math.round(s.y) + y - Math.ceil(s.image.height / 2)) - 1;
                             let to = pal[tempNum2];
 
@@ -85,7 +138,6 @@ namespace transparency {
                             let distance = 1023;
                             let index = 0;
                             let tempNum = 0;
-                            let step = [0, 0, 0];
 
                             //now find the color matching that rbg closest 
                             for (let j = 0; j < 15; j++) {
@@ -97,10 +149,10 @@ namespace transparency {
                                         break;
                                     }
                                 }
-                            }
+                            }*/
 
                             //now set the pixel to that getColor
-                            s.image.setPixel(x, y, index + 1);
+                            s.image.setPixel(x, y, index);
                         }
                     }
                 }
@@ -175,8 +227,11 @@ namespace transparency {
         updateTransparency();
     })
 
+    //% whenUsed
     const CACHED_IMAGE_KEY = "CACHED_IMAGE";
+    //% whenUsed
     const CACHED_REVISION_KEY = "CACHED_REVISION";
+    //% whenUsed
     const OPACITY_KEY = "OPACITY";
 
     game.onUpdate(function () {
