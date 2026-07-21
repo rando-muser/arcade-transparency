@@ -78,6 +78,12 @@ namespace transparency {
         return (15);
     }
 
+    //% block="Cache the opacity $opacity" 
+    export function cacheOpacity(opacity: number) {
+        colorCacheOpacities.push(opacity);
+        colorCacheList.push(control.createBuffer(256));
+    }
+
     //takes indeces as 16-pallete, outputs in 16-pallete
     function lookupColor(spriteColorIndex: number, backgroundColorIndex: number, opacityIndex: number) {
         let pos = colorCacheOpacities.indexOf(opacityIndex);
@@ -237,3 +243,4 @@ namespace transparency {
         }
     })
 }
+
