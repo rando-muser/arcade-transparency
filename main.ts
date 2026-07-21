@@ -121,35 +121,23 @@ namespace transparency {
         for (let i = 0; i < transparentSprites.length; i++) {
             if (transparentSprites[i]) {
                 let s = transparentSprites[i];
-                let co = (2 * s.data[OPACITY_KEY]) / 100;
+                let o = s.data[OPACITY_KEY];
+                let c = colorCacheOpacities.indexOf(o);
 
                 //now loop through image
                 for (let y = 0; y < s.image.height; y++) {
                     for (let x = 0; x < s.image.width; x++) {
                         if (transparentImages[i].getPixel(x, y) != 0) {
+                            let tempNum = transparentImages[i].getPixel(x, y);
                             let tempNum2 = getColor(Math.round(s.x) + x - (Math.ceil(s.image.width / 2)), Math.round(s.y) + y - Math.ceil(s.image.height / 2));
-                            let index = calculateLowestDistanceColor(transparentImages[i].getPixel(x, y), tempNum2, s.data[OPACITY_KEY])
                             
-                            /*let color = pal[transparentImages[i].getPixel(x, y) - 1];
-                            let tempNum2 = getColor(Math.round(s.x) + x - (Math.ceil(s.image.width / 2)), Math.round(s.y) + y - Math.ceil(s.image.height / 2)) - 1;
-                            let to = pal[tempNum2];
-
-                            let mix = [(co*color[0] + (2 - co) * to[0])/2, (co*color[1] + (2 - co) * to[1])/2, (co*color[2] + (2 - co) * to[2])/2];
-                            let distance = 1023;
                             let index = 0;
-                            let tempNum = 0;
-
-                            //now find the color matching that rbg closest 
-                            for (let j = 0; j < 15; j++) {
-                                tempNum = Math.sqrt(Math.pow(mix[0] - pal[j][0], 2) + Math.pow(mix[1] - pal[j][1], 2) + Math.pow(mix[2] - pal[j][2], 2));
-                                if (tempNum < distance) {
-                                    distance = tempNum;
-                                    index = j;
-                                    if (distance == 0) {
-                                        break;
-                                    }
-                                }
-                            }*/
+                            if (c != -1) {
+                                index = lookupColor(tempNum, tempNum2, o);
+                            }
+                            else {
+                                index = calculateLowestDistanceColor(tempNum, tempNum2, o)
+                            }
 
                             //now set the pixel to that getColor
                             s.image.setPixel(x, y, index);
