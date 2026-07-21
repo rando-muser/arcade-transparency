@@ -87,6 +87,9 @@ namespace transparency {
         if (currentCache[cacheIndex] === 0) {
             currentCache[cacheIndex] = calculateLowestDistanceColor(spriteColorIndex, backgroundColorIndex, opacityIndex)
         }
+        else {
+            console.log("Lookup used!")
+        }
 
         return currentCache[cacheIndex]
     }
