@@ -211,10 +211,12 @@ namespace transparency {
     const CACHED_REVISION_KEY = "CACHED_REVISION";
     //% whenUsed
     const OPACITY_KEY = "OPACITY";
-
-    drawing.renderOnSprite(transparentSprites[0], drawing.RenderOrder.Below, () => {
-        transparentSprites[0].sayText("Hi!", 500);
-    })
+    
+    if (transparentSprites[0]) {
+        drawing.renderOnSprite(transparentSprites[0], drawing.RenderOrder.Below, () => {
+            transparentSprites[0].sayText("Hi!", 500);
+        })
+    }
 
     for (let i = 0; i < transparentSprites.length; i++) {
         if (transparentSprites[i]) {
