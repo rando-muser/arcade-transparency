@@ -21,41 +21,19 @@ namespace transparency {
 
     //% whenUsed
     let pal = palleteToRGB(color.currentPalette());
-
-    function decToHex(dec: number) {
-        let tempString = "";
-        let num = dec;
-        while (true) {
-            tempString = hexNums[num % 16] + tempString;
-            num = Math.floor(num / 16);
-            if (num == 0) {
-                break;
-            };
-        }
-        return (tempString);
-    }
-
-    function hexToRgb(hex: string) {
-        while (true) {
-            if (hex.length < 6) {
-                hex = "0" + hex;
-            }
-            else {
-                break;
-            }
-        }
-        let tempArray = [0, 0, 0];
-        for (let i = 0; i < 3; i++) {
-            tempArray[i] = hexNums.indexOf(hex[i * 2]) * 16 + hexNums.indexOf(hex[i * 2 + 1]);
-        }
-        return (tempArray);
+    
+    function unpackColor(color: number) {
+        const blue = color & 0xff
+        const green = (color >> 8) & 0xff
+        const red = color >> 16;
+        return [red, green, blue]
     }
 
     function palleteToRGB(p: color.Palette) {
         let tempArray = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]];
         for (let x = 1; x < 16; x++) {
             let color = p.color(x);
-            tempArray[x - 1] = hexToRgb(decToHex(color));
+            tempArray[x - 1] = unpackColor(color);
         }
         return (tempArray);
     }
