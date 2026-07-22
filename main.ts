@@ -22,6 +22,7 @@ namespace transparency {
     //% whenUsed
     let pal = palleteToRGB(color.currentPalette());
     
+    //Code credit to @richard!
     function unpackColor(color: number) {
         const blue = color & 0xff
         const green = (color >> 8) & 0xff
@@ -56,12 +57,14 @@ namespace transparency {
         return (15);
     }
 
+    //Code credit to @richard!
     //% block="Cache the opacity $opacity" 
     export function cacheOpacity(opacity: number) {
         colorCacheOpacities.push(opacity);
         colorCacheList.push(control.createBuffer(256));
     }
 
+    //Code credit to @richard!
     //takes indeces as 16-pallete, outputs in 16-pallete
     function lookupColor(spriteColorIndex: number, backgroundColorIndex: number, opacityIndex: number) {
         let pos = colorCacheOpacities.indexOf(opacityIndex);
@@ -109,27 +112,30 @@ namespace transparency {
                 let c = colorCacheOpacities.indexOf(o);
 
                 //now loop through image
-                for (let y = 0; y < s.image.height; y++) {
-                    for (let x = 0; x < s.image.width; x++) {
-                        if (transparentImages[i].getPixel(x, y) != 0) {
-                            let tempNum = transparentImages[i].getPixel(x, y);
-                            let tempNum2 = getColor(Math.round(s.x) + x - (Math.ceil(s.image.width / 2)), Math.round(s.y) + y - Math.ceil(s.image.height / 2));
-                            
-                            let index = 0;
-                            if (c != -1) {
-                                index = lookupColor(tempNum, tempNum2, o);
-                            }
-                            else {
-                                index = calculateLowestDistanceColor(tempNum, tempNum2, o)
-                            }
+                drawing.renderOnSprite(s, drawing.RenderOrder.Below, () => {
+                    for (let y = 0; y < s.image.height; y++) {
+                        for (let x = 0; x < s.image.width; x++) {
+                            if (transparentImages[i].getPixel(x, y) != 0) {
+                                let tempNum = transparentImages[i].getPixel(x, y);
+                                //let tempNum2 = getColor(Math.round(s.x) + x - (Math.ceil(s.image.width / 2)), Math.round(s.y) + y - Math.ceil(s.image.height / 2));
+                                let tempNum2 = screen.getPixel(Math.round(s.x) + x - (Math.ceil(s.image.width / 2)), Math.round(s.y) + y - Math.ceil(s.image.height / 2))
 
-                            //now set the pixel to that getColor
-                            s.image.setPixel(x, y, index);
+                                let index = 0;
+                                if (c != -1) {
+                                    index = lookupColor(tempNum, tempNum2, o);
+                                }
+                                else {
+                                    index = calculateLowestDistanceColor(tempNum, tempNum2, o)
+                                }
+
+                                //now set the pixel to that getColor
+                                s.image.setPixel(x, y, index);
+                            }
                         }
                     }
-                }
-                s.data[CACHED_IMAGE_KEY] = s.image;
-                s.data[CACHED_REVISION_KEY] = s.image.revision();
+                    s.data[CACHED_IMAGE_KEY] = s.image;
+                    s.data[CACHED_REVISION_KEY] = s.image.revision();
+                })
             }
             else {
                 // It doesn't exist anymore, get rid of it
@@ -206,6 +212,7 @@ namespace transparency {
     //% whenUsed
     const OPACITY_KEY = "OPACITY";
 
+    //Code credit to @richard!
     game.onUpdate(function () {
         for (let a = 0; a < transparentSprites.length; a++) {
             let z = transparentSprites[a];

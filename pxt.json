@@ -4,7 +4,8 @@
     "dependencies": {
         "device": "*",
         "Color Fading": "github:jwunderl/pxt-color#v0.2.3",
-        "arcade-sprite-util": "github:jwunderl/arcade-sprite-util#v0.6.0"
+        "arcade-sprite-util": "github:jwunderl/arcade-sprite-util#v0.6.0",
+        "arcade-drawing-utils": "github:riknoll/arcade-drawing-utils#v0.1.1"
     },
     "files": [
         "main.blocks",
