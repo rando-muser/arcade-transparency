@@ -1,49 +1,39 @@
 //% color=#1B9AAA weight=1 icon="\uf2a8"  block="Transparency"
 namespace transparency {
+    //% whenUsed
     const transparencyPlaceholder = image.create(1, 1);
+    //% whenUsed
     let transparentSprites = [sprites.create(transparencyPlaceholder)];
+    //% whenUsed
     let transparentImages = [transparencyPlaceholder];
+    //% whenUsed
     const hexNums = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"];
+    //% whenUsed
+    let colorCache = control.createBuffer(256);
+    //% whenUsed
+    let colorCacheList = [colorCache];
+    //% whenUsed
+    let colorCacheOpacities = [50];
+
     sprites.destroy(transparentSprites[0]);
     transparentSprites.pop();
     transparentImages.pop();
 
+    //% whenUsed
     let pal = palleteToRGB(color.currentPalette());
-
-    function decToHex(dec: number) {
-        let tempString = "";
-        let num = dec;
-        while (true) {
-            tempString = hexNums[num % 16] + tempString;
-            num = Math.floor(num / 16);
-            if (num == 0) {
-                break;
-            };
-        }
-        return (tempString);
-    }
-
-    function hexToRgb(hex: string) {
-        while (true) {
-            if (hex.length < 6) {
-                hex = "0" + hex;
-            }
-            else {
-                break;
-            }
-        }
-        let tempArray = [0, 0, 0];
-        for (let i = 0; i < 3; i++) {
-            tempArray[i] = hexNums.indexOf(hex[i * 2]) * 16 + hexNums.indexOf(hex[i * 2 + 1]);
-        }
-        return (tempArray);
+    
+    function unpackColor(color: number) {
+        const blue = color & 0xff
+        const green = (color >> 8) & 0xff
+        const red = color >> 16;
+        return [red, green, blue]
     }
 
     function palleteToRGB(p: color.Palette) {
         let tempArray = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]];
         for (let x = 1; x < 16; x++) {
             let color = p.color(x);
-            tempArray[x - 1] = hexToRgb(decToHex(color));
+            tempArray[x - 1] = unpackColor(color);
         }
         return (tempArray);
     }
@@ -66,41 +56,86 @@ namespace transparency {
         return (15);
     }
 
+    //% block="Cache the opacity $opacity" 
+    export function cacheOpacity(opacity: number) {
+        colorCacheOpacities.push(opacity);
+        colorCacheList.push(control.createBuffer(256));
+    }
+
+    //takes indeces as 16-pallete, outputs in 16-pallete
+    function lookupColor(spriteColorIndex: number, backgroundColorIndex: number, opacityIndex: number) {
+        let pos = colorCacheOpacities.indexOf(opacityIndex);
+        let currentCache = colorCacheList[pos];
+        const cacheIndex = (spriteColorIndex * 16) + backgroundColorIndex;
+
+        if (currentCache[cacheIndex] === 0) {
+            currentCache[cacheIndex] = calculateLowestDistanceColor(spriteColorIndex, backgroundColorIndex, opacityIndex)
+        }
+
+        return currentCache[cacheIndex]
+    }
+
+    //takes inputs as 16-pallete, outputs in 16-pallete
+    function calculateLowestDistanceColor(colorNum: number, toNum: number, opacity: number) {
+        let color = pal[colorNum - 1];
+        let to = pal[toNum - 1];
+        let co = 2 * opacity / 100
+
+        let mix = [(co * color[0] + (2 - co) * to[0]) / 2, (co * color[1] + (2 - co) * to[1]) / 2, (co * color[2] + (2 - co) * to[2]) / 2];
+        let distance = 1023;
+        let index = 0;
+        let tempNum = 0;
+
+        //now find the color matching that rbg closest 
+        for (let j = 0; j < 15; j++) {
+            tempNum = Math.sqrt(Math.pow(mix[0] - pal[j][0], 2) + Math.pow(mix[1] - pal[j][1], 2) + Math.pow(mix[2] - pal[j][2], 2));
+            if (tempNum < distance) {
+                distance = tempNum;
+                index = j;
+                if (distance == 0) {
+                    break;
+                }
+            }
+        }
+
+        return (index + 1);
+    }
+
     function updateTransparency() {
         for (let i = 0; i < transparentSprites.length; i++) {
             if (transparentSprites[i]) {
                 let s = transparentSprites[i];
-                let co = (2 * s.data[OPACITY_KEY]) / 100;
+                let o = s.data[OPACITY_KEY];
+                let c = colorCacheOpacities.indexOf(o);
+                let t = s.data[TINT_KEY];
+                let p = s.data[PARTIAL_KEY];
 
                 //now loop through image
                 for (let y = 0; y < s.image.height; y++) {
                     for (let x = 0; x < s.image.width; x++) {
                         if (transparentImages[i].getPixel(x, y) != 0) {
+                            let tempNum = transparentImages[i].getPixel(x, y);
+                            if (p != -1 && tempNum != p) {
+                                continue;
+                            }
+                            let tempNum2 = -1;
+                            if (t == -1) {
+                                tempNum2 = getColor(Math.round(s.x) + x - (Math.ceil(s.image.width / 2)), Math.round(s.y) + y - Math.ceil(s.image.height / 2));
+                            }
+                            else {
+                                tempNum2 = t;
+                            }
 
-                            let color = pal[transparentImages[i].getPixel(x, y) - 1];
-                            let tempNum2 = getColor(Math.round(s.x) + x - (Math.ceil(s.image.width / 2)), Math.round(s.y) + y - Math.ceil(s.image.height / 2)) - 1;
-                            let to = pal[tempNum2];
-
-                            let mix = [(co*color[0] + (2 - co) * to[0])/2, (co*color[1] + (2 - co) * to[1])/2, (co*color[2] + (2 - co) * to[2])/2];
-                            let distance = 1023;
                             let index = 0;
-                            let tempNum = 0;
-                            let step = [0, 0, 0];
-
-                            //now find the color matching that rbg closest 
-                            for (let j = 0; j < 15; j++) {
-                                tempNum = Math.sqrt(Math.pow(mix[0] - pal[j][0], 2) + Math.pow(mix[1] - pal[j][1], 2) + Math.pow(mix[2] - pal[j][2], 2));
-                                if (tempNum < distance) {
-                                    distance = tempNum;
-                                    index = j;
-                                    if (distance == 0) {
-                                        break;
-                                    }
-                                }
+                            if (c != -1) {
+                                index = lookupColor(tempNum, tempNum2, o);
+                            }
+                            else {
+                                index = calculateLowestDistanceColor(tempNum, tempNum2, o)
                             }
 
                             //now set the pixel to that getColor
-                            s.image.setPixel(x, y, index + 1);
+                            s.image.setPixel(x, y, index);
                         }
                     }
                 }
@@ -128,9 +163,35 @@ namespace transparency {
         sprite.data[CACHED_IMAGE_KEY] = sprite.image;
         sprite.data[CACHED_REVISION_KEY] = sprite.image.revision();
         sprite.data[OPACITY_KEY] = opacity;
+        sprite.data[TINT_KEY] = -1;
+        sprite.data[PARTIAL_KEY] = -1;
     }
 
-    //% block="Remove transparency on $sprite"
+    //% block="Tint $sprite with color $color || and opacity $opacity"
+    //% opacity.min=0 opacity.max=100
+    //% color.min=1 color.max=15
+    //% opacity.defl=50
+    //% color.defl=1
+    //% sprite.defl=mySprite
+    //% sprite.shadow=variables_get
+    export function tint(sprite: Sprite, color: number, opacity?: number) {
+        make(sprite, opacity);
+        sprite.data[TINT_KEY] = color;
+    }
+
+    //% block="Make only color $colorToMakeTransparent in $sprite transparent || with opacity $opacity"
+    //% opacity.min=0 opacity.max=100
+    //% colorToMakeTransparent.min=1 colorToMakeTransparent.max=15
+    //% opacity.defl=50
+    //% colorToMakeTransparent.defl=1
+    //% sprite.defl=mySprite
+    //% sprite.shadow=variables_get
+    export function partial(sprite: Sprite, colorToMakeTransparent: number, opacity?: number) {
+        make(sprite, opacity);
+        sprite.data[PARTIAL_KEY] = colorToMakeTransparent;
+    }
+
+    //% block="Remove transparency effects on $sprite"
     //% sprite.defl=mySprite
     //% sprite.shadow=variables_get
     export function remove(sprite: Sprite) {
@@ -149,9 +210,20 @@ namespace transparency {
         let index = transparentSprites.indexOf(sprite);
         if (index == -1) {
             if (sprite.data[OPACITY_KEY]) {
-                make(sprite, sprite.data[OPACITY_KEY]);
+                if (sprite.data[TINT_KEY] == -1) {
+                    if (sprite.data[PARTIAL_KEY] == -1) {
+                        make(sprite, sprite.data[OPACITY_KEY]);
+                    }
+                    else {
+                        partial(sprite, sprite.data[PARTIAL_KEY], sprite.data[OPACITY_KEY]);
+                    }
+                }
+                else {
+                    tint(sprite, sprite.data[TINT_KEY], sprite.data[OPACITY_KEY]);
+                }
             }
             else {
+                //the sprite hasn't been transparent before, set to default
                 make(sprite, 50);
             }
         }
@@ -175,9 +247,16 @@ namespace transparency {
         updateTransparency();
     })
 
+    //% whenUsed
     const CACHED_IMAGE_KEY = "CACHED_IMAGE";
+    //% whenUsed
     const CACHED_REVISION_KEY = "CACHED_REVISION";
+    //% whenUsed
     const OPACITY_KEY = "OPACITY";
+    //% whenUsed
+    const TINT_KEY = "TINT";
+    //% whenUsed
+    const PARTIAL_KEY = "PARTIAL";
 
     game.onUpdate(function () {
         for (let a = 0; a < transparentSprites.length; a++) {
@@ -194,3 +273,6 @@ namespace transparency {
         }
     })
 }
+
+//to add:
+//transparency on only one part --> new extender block to select the only color in the image to be transparent
