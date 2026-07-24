@@ -108,12 +108,16 @@ namespace transparency {
                 let o = s.data[OPACITY_KEY];
                 let c = colorCacheOpacities.indexOf(o);
                 let t = s.data[TINT_KEY];
+                let p = s.data[PARTIAL_KEY];
 
                 //now loop through image
                 for (let y = 0; y < s.image.height; y++) {
                     for (let x = 0; x < s.image.width; x++) {
                         if (transparentImages[i].getPixel(x, y) != 0) {
                             let tempNum = transparentImages[i].getPixel(x, y);
+                            if (p != -1 && tempNum != p) {
+                                continue;
+                            }
                             let tempNum2 = -1;
                             if (t == -1) {
                                 tempNum2 = getColor(Math.round(s.x) + x - (Math.ceil(s.image.width / 2)), Math.round(s.y) + y - Math.ceil(s.image.height / 2));
@@ -160,6 +164,7 @@ namespace transparency {
         sprite.data[CACHED_REVISION_KEY] = sprite.image.revision();
         sprite.data[OPACITY_KEY] = opacity;
         sprite.data[TINT_KEY] = -1;
+        sprite.data[PARTIAL_KEY] = -1;
     }
 
     //% block="Tint $sprite with color $color || and opacity $opacity"
@@ -172,6 +177,18 @@ namespace transparency {
     export function tint(sprite: Sprite, color: number, opacity?: number) {
         make(sprite, opacity);
         sprite.data[TINT_KEY] = color;
+    }
+
+    //% block="Make only color $colorToMakeTransparent in $sprite transparent || with opacity $opacity"
+    //% opacity.min=0 opacity.max=100
+    //% colorToMakeTransparent.min=1 colorToMakeTransparent.max=15
+    //% opacity.defl=50
+    //% colorToMakeTransparent.defl=1
+    //% sprite.defl=mySprite
+    //% sprite.shadow=variables_get
+    export function partial(sprite: Sprite, colorToMakeTransparent: number, opacity?: number) {
+        make(sprite, opacity);
+        sprite.data[PARTIAL_KEY] = colorToMakeTransparent;
     }
 
     //% block="Remove transparency effects on $sprite"
@@ -194,10 +211,15 @@ namespace transparency {
         if (index == -1) {
             if (sprite.data[OPACITY_KEY]) {
                 if (sprite.data[TINT_KEY] == -1) {
-                    make(sprite, sprite.data[OPACITY_KEY]);
+                    if (sprite.data[PARTIAL_KEY] == -1) {
+                        make(sprite, sprite.data[OPACITY_KEY]);
+                    }
+                    else {
+                        partial(sprite, sprite.data[PARTIAL_KEY], sprite.data[OPACITY_KEY]);
+                    }
                 }
                 else {
-                    //TINT FUNCTION HERE
+                    tint(sprite, sprite.data[TINT_KEY], sprite.data[OPACITY_KEY]);
                 }
             }
             else {
@@ -233,6 +255,8 @@ namespace transparency {
     const OPACITY_KEY = "OPACITY";
     //% whenUsed
     const TINT_KEY = "TINT";
+    //% whenUsed
+    const PARTIAL_KEY = "PARTIAL";
 
     game.onUpdate(function () {
         for (let a = 0; a < transparentSprites.length; a++) {
@@ -251,5 +275,4 @@ namespace transparency {
 }
 
 //to add:
-//tinting --> new extender block that adds a 'tint' cached data, overrides transparency updater with just 1 color to mix to
 //transparency on only one part --> new extender block to select the only color in the image to be transparent
